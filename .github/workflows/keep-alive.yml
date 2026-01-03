@@ -2,14 +2,20 @@ name: ClawCloud 自动登录保活
 
 on:
   schedule:
-    - cron: '0 1 */5 * *'  # UTC 1:00，每5天运行
+    - cron: '0 1 */5 * *'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   auto-login:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    
+    permissions:
+      contents: read
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
@@ -33,5 +39,5 @@ jobs:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           REPO_TOKEN: ${{ secrets.REPO_TOKEN }}
-          
+          GITHUB_REPOSITORY: ${{ github.repository }}
         run: python scripts/auto_login.py
