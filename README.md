@@ -1,45 +1,60 @@
-# ClawCloud-Run 自动登录助手
+# 🛡️ ClawCloud-Run 自动化保活哨兵 (Enhanced Version)
 
-这是一个通过 GitHub Actions 实现的自动化脚本，用于定时自动登录 [ClawCloudRun](https://console.run.claw.cloud/signin?link=WRJQ4YKZNLI5)，以保持账户活跃。
+基于 Playwright 的 ClawCloud 账户自动化保活方案。通过模拟真实用户行为、处理 GitHub 状态机变换，实现高成功率的无人值守登录。
 
-## ✨ 主要功能
+---
 
-- **🤖 自动登录**: 定时执行登录操作，避免账户因不活跃而被清空项目。
-- **🌍 区域自适应**: 自动检测并跳转到账户所在的区域。
-- **🔒 安全验证支持**:
-    - 支持设备授权验证 (Device Verification)。
-    - 支持两步验证 (2FA)，包括：
-        - GitHub 移动应用批准。
-        - 通过 Telegram 机器人发送验证码 (`/code 123456`)。
-- **🔔 实时通知**: 通过 Telegram 机器人发送登录结果、设备验证和两步验证请求。
-- **🍪 Cookie 自动更新**: 登录成功后，可自动更新 GitHub Secrets 中的 `GH_SESSION`，免去手动更新的麻烦。
+## 🛠️ 技术核心与特性
 
-## 🚀 如何部署
+- **🛡️ 状态机自愈登录**: 自动识别 Session 过期、OAuth 授权页、以及“验证密码以继续”等复杂状态。
+- **🔐 SealedBox 安全加密**: 采用 `libsodium` 标准加密算法更新 Secret，确保 Cookie 在 GitHub 基础设施内加密传输。
+- **🌍 动态区域追踪**: 实时解析 URL 变更，自动追踪账户所在的子域名区域（如 `ap-southeast-1`）。
+- **🤖 2FA 指令中继**: 通过 Telegram Bot 实现双向交互，支持移动端批准检测与 `/code` 指令远程输入。
+- **📦 环境隔离适配**: 针对 GitHub Actions 容器优化的 Chromium 运行参数，彻底解决内存溢出与依赖缺失。
 
-1.  **Fork 本仓库**: 点击右上角的 "Fork" 按钮，将此项目复制到你自己的 GitHub 账户下。
-2.  **配置 Secrets**: 在你 Fork 的仓库中，进入 `Settings` -> `Secrets and variables` -> `Actions`。点击 `New repository secret`，添加以下变量：
+---
 
-## ⚙️ 配置变量
+## ⚙️ 配置变量 (Secrets)
 
-| Secret 名称       | 是否必须       | 描述                                                                                                                              |
-| ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `GH_USERNAME`     | **是**   | 你的 GitHub 用户名。                                                                                                                |
-| `GH_PASSWORD`     | **是**   | 你的 GitHub 密码。                                                                                                                |
-| `GH_SESSION`      | **是**       | GitHub 的 `user_session` Cookie 值。首次运行时可不填，脚本会自动获取并提示你更新。如果配置了 `REPO_TOKEN`，脚本可自动更新此值。 |
-| `TG_BOT_TOKEN`    | **是**        | 用于发送通知的 Telegram Bot Token。如果你需要接收登录状态或进行两步验证，则必须配置。                                              |
-| `TG_CHAT_ID`      | **是**        | 你的 Telegram User ID 或 Channel ID，用于接收机器人消息。                                                                        |
-| `REPO_TOKEN`      | **是**       | GitHub Personal Access Token。如果希望脚本自动更新 `GH_SESSION`，需要提供此 Token。请授予 `repo` 权限。                            |
-| `TWO_FACTOR_WAIT` | 否       | 两步验证的等待时间（秒），默认为 `120`。                                                                                              |
+| Secret 名称 | 必须 | 权限/格式要求 | 说明 |
+| :--- | :--- | :--- | :--- |
+| `GH_USERNAME` | **是** | 字符串 | GitHub 账号。 |
+| `GH_PASSWORD` | **是** | 字符串 | GitHub 密码。 |
+| `REPO_TOKEN` | **是** | PAT (Classic) | 必须包含 `workflow` 和 `write:secrets` 权限。 |
+| `TG_BOT_TOKEN` | **是** | HTTP API Token | 从 @BotFather 获取。 |
+| `TG_CHAT_ID` | **是** | 数字 ID | 从 @userinfobot 获取。 |
+| `GH_SESSION` | 否 | Cookie Value | 初始运行可留空，成功后脚本会自动接管更新。 |
+| `TWO_FACTOR_WAIT`| 否 | 数字 (秒) | 默认 `120`，建议网络环境差时调大。 |
 
+---
 
-## ▶️ 如何运行
+## 🚀 部署指引
 
-- **自动运行**: 默认配置下，脚本会**每 5 天**自动运行一次。你可以在 `.github/workflows/keep-alive.yml` 文件中修改 `cron`表达式来调整运行频率。
-- **手动运行**:
-    1.  进入 Fork 后的仓库页面。
-    2.  点击 `Actions` 选项卡。
-    3.  在左侧选择 `ClawCloud 自动登录保活`。
-    4.  点击右侧的 `Run workflow` 按钮，即可立即触发一次登录任务。
+### 1. 权限准备 (关键)
+前往 [Developer settings](https://github.com/settings/tokens) 创建 Personal Access Token (PAT)：
+- **勾选 `workflow`**: 允许脚本在失败时触发重试流程。
+- **勾选 `write:secrets`**: 允许脚本自动回写最新的 `GH_SESSION`。
+
+### 2. 仓库设置
+1. **Fork** 本仓库。
+2. 在仓库 `Settings > Secrets and variables > Actions` 中填入上述表格中的所有变量。
+
+### 3. 激活保活
+- **手动触发**: `Actions` -> `ClawCloud 自动登录保活` -> `Run workflow`。
+- **定时触发**: 默认每 5 天运行一次（UTC 1:00），可修改 `.github/workflows/keep-alive.yml` 中的 `cron` 表达式。
+
+---
+
+## 📝 运维记录与审计
+
+- **日志监控**: 脚本每步执行均有 Emoji 状态标识，可通过 Actions 实时查看。
+- **可视化调试**: 失败时脚本会自动截图并发送至 Telegram，帮助定位 UI 变更。
+- **依赖说明**: 本项目运行依赖 `playwright`, `requests`, `pynacl`。
+
+---
+
+## ⚖️ 免责声明
+本脚本仅用于个人账户维护及技术交流。使用自动化工具可能违反平台服务条款，请自行承担相关风险。
 
 ## 🙏 致谢
 
