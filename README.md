@@ -58,4 +58,4 @@
 
 ## 🙏 致谢
 
-本项目基于 [oyz8/ClawCloud-Run](https://github.com/oyz8/ClawCloud-Run) 做了些调整，感谢原作者的贡献。
+本项目基于 [oyz8/ClawCloud-Run](https://github.com/oyz8/ClawCloud-Run) 感谢原作者的贡献，[frankiejun/ClawCloud-Run](https://github.com/frankiejun/ClawCloud-Run)做了些调整。
